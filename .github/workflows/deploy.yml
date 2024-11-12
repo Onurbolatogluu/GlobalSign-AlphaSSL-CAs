@@ -37,6 +37,12 @@ jobs:
           echo "Found ZIP URLs:"
           echo "$ZIP_URLS"
 
+          # ZIP URL'leri bulunamadıysa workflow'u durdur
+          if [ -z "$ZIP_URLS" ]; then
+            echo "No ZIP URLs found. Exiting."
+            exit 1
+          fi
+
           # Her bir .zip dosyasını indirip aç
           for url in $ZIP_URLS; do
             echo "Downloading $url..."
@@ -55,6 +61,15 @@ jobs:
         run: |
           echo "Listing certificates directory:"
           ls -la certificates
+
+      - name: Validate Certificates
+        run: |
+          FILE_COUNT=$(ls -1 certificates | wc -l)
+          echo "Number of files in certificates directory: $FILE_COUNT"
+          if [ "$FILE_COUNT" -eq 0 ]; then
+            echo "No certificate files found. Exiting."
+            exit 1
+          fi
 
       - name: Check for Changes
         id: git-check
