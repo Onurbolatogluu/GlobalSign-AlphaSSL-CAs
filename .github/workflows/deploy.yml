@@ -5,6 +5,9 @@ on:
     - cron: '0 0 * * *'  # UTC saatine göre her gün saat 00:00'da çalışır
   workflow_dispatch: # Manuel tetikleme imkanı sağlar
 
+permissions:
+  contents: write  # Push işlemi için gerekli izinleri tanımlar
+
 jobs:
   update-certificates:
     runs-on: ubuntu-latest
@@ -18,18 +21,22 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Install Unzip
-        run: sudo apt-get install -y unzip
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y unzip curl
 
       - name: Download and Extract Certificates
         run: |
           mkdir -p certificates
-          CERT_ZIP_URLS=(
-            "https://www.ssl2buy.com/wp-content/uploads/2024/01/alphasslrootcabundle-r6.zip"
-            "https://www.ssl2buy.com/wp-content/uploads/2022/12/alphasslrootcabundle-g4.zip"
-            # Gelecekte daha fazla URL ekleyebilirsiniz
-          )
-          for url in "${CERT_ZIP_URLS[@]}"; do
+          # Ana sayfayı indir
+          curl -sSL https://www.ssl2buy.com/wiki/alphassl-ca-bundle -o main_page.html
+
+          # .zip dosyalarının URL'lerini çıkart
+          ZIP_URLS=$(grep -oP 'https://www.ssl2buy.com/wp-content/uploads/[^\s"]+\.zip' main_page.html | sort | uniq)
+
+          # Her bir .zip dosyasını indirip aç
+          for url in $ZIP_URLS; do
             echo "Downloading $url..."
             filename=$(basename "$url")
             curl -sSL "$url" -o "$filename"
@@ -38,6 +45,9 @@ jobs:
             # İndirilen .zip dosyasını silmek isterseniz aşağıdaki satırı aktif edebilirsiniz
             rm "$filename"
           done
+
+          # Ana sayfa dosyasını sil
+          rm main_page.html
 
       - name: Check for Changes
         id: git-check
@@ -57,6 +67,7 @@ jobs:
       - name: Push Changes
         if: steps.git-check.outputs.changed == 'true'
         run: |
+          git remote set-url origin https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
           git push origin HEAD:${{ github.ref }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
