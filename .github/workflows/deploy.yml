@@ -32,6 +32,11 @@ jobs:
           # Ana sayfayı indir
           curl -sSL https://www.ssl2buy.com/wiki/alphassl-ca-bundle -o main_page.html
 
+          # main_page.html içeriğini loglamak için ekleme
+          echo "### main_page.html Content ###"
+          head -n 50 main_page.html  # İlk 50 satırı gösterir, gerektiğinde artırabilirsiniz
+          echo "### End of main_page.html Content ###"
+
           # .zip dosyalarının URL'lerini çıkart
           ZIP_URLS=$(grep -oP 'https://www.ssl2buy.com/wp-content/uploads/[0-9]{4}/[0-9]{2}/alphasslrootcabundle-[a-z0-9]+\.zip' main_page.html | sort | uniq)
           echo "Found ZIP URLs:"
